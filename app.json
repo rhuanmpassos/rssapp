@@ -2,7 +2,7 @@
   "expo": {
     "name": "RSS App",
     "slug": "rss-app",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "scheme": "rssapp",
     "userInterfaceStyle": "automatic",
