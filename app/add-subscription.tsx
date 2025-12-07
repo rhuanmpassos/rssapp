@@ -23,6 +23,8 @@ import { FolderSelector } from '../src/components/FolderSelector';
 import { useDebounce } from '../src/hooks/useDebounce';
 import { useFeedStore } from '../src/store/feedStore';
 import { useYouTubeStore } from '../src/store/youtubeStore';
+import { CustomDialog } from '../src/components/CustomDialog';
+import { useDialog } from '../src/hooks/useDialog';
 
 type SubscriptionType = 'site' | 'youtube';
 
@@ -58,6 +60,9 @@ export default function AddSubscriptionScreen() {
   // Get existing subscriptions to check for duplicates
   const subscriptions = useFeedStore((state) => state.subscriptions);
   const channels = useYouTubeStore((state) => state.channels);
+
+  // Custom dialog hook  
+  const { dialogConfig, showAlert, hideDialog } = useDialog();
 
   const isSite = type === 'site';
 
@@ -540,6 +545,17 @@ export default function AddSubscriptionScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Custom Dialog */}
+      {dialogConfig && (
+        <CustomDialog
+          visible={true}
+          title={dialogConfig.title}
+          message={dialogConfig.message}
+          buttons={dialogConfig.buttons}
+          onDismiss={hideDialog}
+        />
+      )}
     </SafeAreaView>
   );
 }
