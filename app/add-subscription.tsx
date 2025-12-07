@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -167,7 +166,7 @@ export default function AddSubscriptionScreen() {
       console.log('POST response:', JSON.stringify(response.data, null, 2));
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
+      showAlert(
         '🎉 Sucesso!',
         feedType === 'youtube'
           ? 'Canal adicionado! Novos vídeos aparecerão aqui.'
@@ -175,6 +174,7 @@ export default function AddSubscriptionScreen() {
         [{
           text: 'OK',
           onPress: () => {
+            hideDialog();
             if (router.canGoBack()) {
               router.back();
             } else {
@@ -190,7 +190,7 @@ export default function AddSubscriptionScreen() {
       console.error('Error status:', error.response?.status);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const message = error.response?.data?.message || 'Não foi possível adicionar o feed';
-      Alert.alert('Erro', message);
+      showAlert('Erro', message);
     } finally {
       setIsLoading(false);
       setShowSearchResults(false);
@@ -201,7 +201,7 @@ export default function AddSubscriptionScreen() {
   const handleAdd = async () => {
     if (!url.trim()) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
+      showAlert(
         'Campo vazio',
         isSite
           ? 'Digite a URL do site ou pesquise por feeds'
@@ -219,12 +219,13 @@ export default function AddSubscriptionScreen() {
           folderId: selectedFolderId || undefined,
         });
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert(
+        showAlert(
           '🎉 Sucesso!',
           'Site adicionado! Novos artigos chegarão em breve.',
           [{
             text: 'OK',
             onPress: () => {
+              hideDialog();
               if (router.canGoBack()) {
                 router.back();
               } else {
@@ -240,12 +241,13 @@ export default function AddSubscriptionScreen() {
           folderId: selectedFolderId || undefined,
         });
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert(
+        showAlert(
           '🎉 Sucesso!',
           'Canal adicionado! Novos vídeos aparecerão aqui.',
           [{
             text: 'OK',
             onPress: () => {
+              hideDialog();
               if (router.canGoBack()) {
                 router.back();
               } else {
@@ -260,7 +262,7 @@ export default function AddSubscriptionScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const message = error.response?.data?.message ||
         (isSite ? 'Não foi possível adicionar o site' : 'Não foi possível adicionar o canal');
-      Alert.alert('Erro', message);
+      showAlert('Erro', message);
     } finally {
       setIsLoading(false);
     }
