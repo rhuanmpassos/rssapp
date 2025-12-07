@@ -1,0 +1,40 @@
+import React from 'react';
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
+
+interface LoadingScreenProps {
+  message?: string;
+}
+
+export function LoadingScreen({ message }: LoadingScreenProps) {
+  const { colors } = useTheme();
+
+  return (
+    <View
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <ActivityIndicator size="large" color={colors.primary} />
+      {message && (
+        <Text style={[styles.message, { color: colors.textSecondary }]}>
+          {message}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  message: {
+    marginTop: 16,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+});
+
+
+
