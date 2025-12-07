@@ -16,6 +16,7 @@ import { useTheme } from '../src/contexts/ThemeContext';
 import { useGlobalDialog } from '../src/contexts/DialogContext';
 import { api } from '../src/services/api';
 import { useAuthStore } from '../src/store/authStore';
+import { useBookmarkStore } from '../src/store/bookmarkStore';
 
 interface SettingRowProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -92,6 +93,8 @@ export default function SettingsScreen() {
   const [sitesCount, setSitesCount] = useState(0);
   const [youtubeCount, setYoutubeCount] = useState(0);
   const { logout, user } = useAuthStore();
+  const bookmarks = useBookmarkStore((state) => state.bookmarks);
+  const bookmarksCount = bookmarks.length;
 
   useEffect(() => {
     loadCounts();
@@ -224,6 +227,7 @@ export default function SettingsScreen() {
             iconColor="#FFFFFF"
             iconBg="#8B5CF6"
             title="Favoritos"
+            value={bookmarksCount.toString()}
             showChevron
             onPress={() => router.push('/bookmarks' as any)}
           />
