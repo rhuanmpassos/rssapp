@@ -18,6 +18,7 @@ import { SearchBar } from '../../src/components/SearchBar';
 import { SkeletonCard } from '../../src/components/SkeletonLoader';
 import { QuickActions } from '../../src/components/QuickActions';
 import { EmptyState } from '../../src/components/EmptyState';
+import { ChannelChips } from '../../src/components/ChannelChips';
 
 import { UrgencyIndicator } from '../../src/components/UrgencyIndicator';
 import { useDebounce } from '../../src/hooks/useDebounce';
@@ -45,6 +46,7 @@ export default function YouTubeScreen() {
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null);
   const [showStreakWarning, setShowStreakWarning] = useState(false);
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
 
   // Progress Store
   const progress = useProgressStore((state) => state.progress);
@@ -77,18 +79,106 @@ export default function YouTubeScreen() {
     setRefreshing(false);
   }, [fetchChannels, fetchAllVideos]);
 
-  // Filter videos by search query and recency (24 hours)
-  const filteredVideos = React.useMemo(() => {
-    let filtered = videos;
+  // Count live videos (ONLY videoType === 'live' or isLive === true)
+  const liveVideos = React.useMemo(() => {
+    return videos.filter((video) => video.videoType === 'live' || video.isLive === true);
+  }, [videos]);
 
-    // CRITICAL: Only show videos from last 24 hours
+  const hasLiveVideos = liveVideos.length > 0;
+
+  // Calculate recent videos by channel (last 24 hours)
+  const recentVideosByChannel = React.useMemo(() => {
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
-    filtered = filtered.filter((video) => {
+    const countMap = new Map<string, number>();
+
+    videos.forEach((video) => {
+      const publishDate = new Date(video.publishedAt);
+      if (publishDate >= oneDayAgo && video.channelDbId) {
+        const current = countMap.get(video.channelDbId) || 0;
+        countMap.set(video.channelDbId, current + 1);
+      }
+    });
+
+    return countMap;
+  }, [videos]);
+
+  // Filter videos by search query, channel, and recency
+  const filteredVideos = React.useMemo(() => {
+    // If "AO VIVO" selected, show ONLY live videos
+    if (selectedChannelId === 'live') {
+      let filtered = videos.filter((video) => video.videoType === 'live' || video.isLive === true);
+
+      // Filter by search query
+      if (debouncedSearchQuery.trim()) {
+        const query = debouncedSearchQuery.toLowerCase();
+        filtered = filtered.filter(
+          (video) =>
+            video.title.toLowerCase().includes(query) ||
+            video.description?.toLowerCase().includes(query)
+        );
+      }
+
+      return filtered;
+    }
+
+    // For TODOS and specific channels:
+    // - Show ONLY regular videos (videoType === 'video')
+    // - Exclude: live, vod, short
+    let allVideos = videos.filter((video) => {
+      // Exclude if it's currently live
+      if (video.isLive === true || video.videoType === 'live') return false;
+      // Exclude if it's a VOD recording
+      if (video.videoType === 'vod') return false;
+      // Exclude if it's a short
+      if (video.videoType === 'short') return false;
+      // Include regular videos (videoType === 'video' or not set)
+      return true;
+    });
+
+    // If specific channel selected - show last 6 videos (regardless of date)
+    if (selectedChannelId !== null) {
+      // DEBUG: Log channel IDs
+      console.log('🔍 Selected channel:', selectedChannelId);
+      console.log('🔍 allVideos count:', allVideos.length);
+      console.log('🔍 Sample video channelDbIds:', allVideos.slice(0, 3).map(v => v.channelDbId));
+
+      const channelVideos = allVideos
+        .filter((video) => video.channelDbId === selectedChannelId)
+        .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+
+      console.log('🔍 Matching videos:', channelVideos.length);
+
+      // Get last 6 videos from this channel
+      let filtered = channelVideos.slice(0, 6);
+
+      // Filter by search query
+      if (debouncedSearchQuery.trim()) {
+        const query = debouncedSearchQuery.toLowerCase();
+        filtered = filtered.filter(
+          (video) =>
+            video.title.toLowerCase().includes(query) ||
+            video.description?.toLowerCase().includes(query)
+        );
+      }
+
+      return filtered;
+    }
+
+    // TODOS - show only videos from last 24 hours (most recent)
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+    let filtered = allVideos.filter((video) => {
       const publishDate = new Date(video.publishedAt);
       return publishDate >= oneDayAgo;
     });
+
+    // Sort by date (most recent first)
+    filtered.sort((a, b) =>
+      new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    );
 
     // Filter by search query
     if (debouncedSearchQuery.trim()) {
@@ -101,7 +191,7 @@ export default function YouTubeScreen() {
     }
 
     return filtered;
-  }, [videos, debouncedSearchQuery]);
+  }, [videos, debouncedSearchQuery, selectedChannelId]);
 
   const handleAddChannel = () => {
     router.push('/add-subscription?type=youtube');
@@ -147,12 +237,14 @@ export default function YouTubeScreen() {
   const renderItem = React.useCallback(
     ({ item }: { item: YouTubeVideo }) => {
       const channel = channelsMap.get(item.channelDbId);
+      // Use channelTitle from video (API response) first, fallback to channel map
+      const channelTitle = item.channelTitle || channel?.title;
       return (
         <TouchableOpacity
           onLongPress={() => handleVideoLongPress(item)}
           activeOpacity={0.7}
         >
-          <VideoCard video={item} channelTitle={channel?.title} />
+          <VideoCard video={item} channelTitle={channelTitle} />
         </TouchableOpacity>
       );
     },
@@ -225,6 +317,16 @@ export default function YouTubeScreen() {
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder="Buscar vídeos..."
+      />
+
+      {/* Channel Chips */}
+      <ChannelChips
+        channels={channels}
+        selectedChannelId={selectedChannelId}
+        onSelectChannel={setSelectedChannelId}
+        hasLiveVideos={hasLiveVideos}
+        liveCount={liveVideos.length}
+        recentVideosByChannel={recentVideosByChannel}
       />
 
       {/* Videos List */}

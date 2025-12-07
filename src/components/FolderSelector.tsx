@@ -7,10 +7,10 @@ import {
   Modal,
   TextInput,
   FlatList,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
+import { useGlobalDialog } from '../contexts/DialogContext';
 import { api } from '../services/api';
 import * as Haptics from 'expo-haptics';
 import { Folder } from './FolderChips';
@@ -25,6 +25,7 @@ export function FolderSelector({
   onSelectFolder,
 }: FolderSelectorProps) {
   const { colors, isDark } = useTheme();
+  const { showError } = useGlobalDialog();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -51,7 +52,7 @@ export function FolderSelector({
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) {
-      Alert.alert('Erro', 'Digite um nome para a pasta');
+      showError('Erro', 'Digite um nome para a pasta');
       return;
     }
 
@@ -65,7 +66,7 @@ export function FolderSelector({
       setShowCreateModal(false);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
-      Alert.alert(
+      showError(
         'Erro',
         error.response?.data?.message || 'Não foi possível criar a pasta'
       );

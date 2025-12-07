@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -16,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { useGlobalDialog } from '../../src/contexts/DialogContext';
 import { useAuthStore } from '../../src/store/authStore';
 
 interface ValidationErrors {
@@ -27,6 +27,7 @@ interface ValidationErrors {
 
 export default function RegisterScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
+  const { showError, showSuccess } = useGlobalDialog();
   const { register, isLoading } = useAuthStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -50,7 +51,7 @@ export default function RegisterScreen() {
           return 'Nome deve ter no máximo 100 caracteres';
         }
         return undefined;
-      
+
       case 'email':
         if (!value.trim()) {
           return 'Email é obrigatório';
@@ -60,7 +61,7 @@ export default function RegisterScreen() {
           return 'Email inválido';
         }
         return undefined;
-      
+
       case 'password':
         if (!value) {
           return 'Senha é obrigatória';
@@ -73,7 +74,7 @@ export default function RegisterScreen() {
           return 'Senha deve conter pelo menos uma letra e um número';
         }
         return undefined;
-      
+
       case 'confirmPassword':
         if (!value) {
           return 'Confirmação de senha é obrigatória';
@@ -82,7 +83,7 @@ export default function RegisterScreen() {
           return 'As senhas não coincidem';
         }
         return undefined;
-      
+
       default:
         return undefined;
     }
@@ -90,19 +91,19 @@ export default function RegisterScreen() {
 
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
-    
+
     const nameError = validateField('name', name);
     if (nameError) newErrors.name = nameError;
-    
+
     const emailError = validateField('email', email);
     if (emailError) newErrors.email = emailError;
-    
+
     const passwordError = validateField('password', password);
     if (passwordError) newErrors.password = passwordError;
-    
+
     const confirmPasswordError = validateField('confirmPassword', confirmPassword);
     if (confirmPasswordError) newErrors.confirmPassword = confirmPasswordError;
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -117,13 +118,13 @@ export default function RegisterScreen() {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await register(email.trim(), password, name.trim());
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Sucesso', 'Conta criada com sucesso!', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)') },
-      ]);
+      showSuccess('Sucesso', 'Conta criada com sucesso!', () => {
+        router.replace('/(tabs)');
+      });
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const errorMessage = error.response?.data?.message || error.message || 'Não foi possível criar a conta';
-      Alert.alert('Erro', errorMessage);
+      showError('Erro', errorMessage);
     }
   };
 
@@ -137,7 +138,7 @@ export default function RegisterScreen() {
     if (errors[field]) {
       setErrors({ ...errors, [field]: undefined });
     }
-    
+
     switch (field) {
       case 'name':
         setName(value);
@@ -161,7 +162,7 @@ export default function RegisterScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -214,11 +215,11 @@ export default function RegisterScreen() {
                     styles.inputContainer,
                     {
                       backgroundColor: colors.backgroundSecondary,
-                      borderColor: errors.name 
-                        ? colors.destructive 
-                        : focusedField === 'name' 
-                        ? colors.primary 
-                        : colors.border,
+                      borderColor: errors.name
+                        ? colors.destructive
+                        : focusedField === 'name'
+                          ? colors.primary
+                          : colors.border,
                       borderWidth: errors.name || focusedField === 'name' ? 2 : 1,
                     },
                   ]}
@@ -226,11 +227,11 @@ export default function RegisterScreen() {
                   <Ionicons
                     name="person-outline"
                     size={20}
-                    color={errors.name 
-                      ? colors.destructive 
-                      : focusedField === 'name' 
-                      ? colors.primary 
-                      : colors.textTertiary}
+                    color={errors.name
+                      ? colors.destructive
+                      : focusedField === 'name'
+                        ? colors.primary
+                        : colors.textTertiary}
                     style={styles.inputIcon}
                   />
                   <TextInput
@@ -261,11 +262,11 @@ export default function RegisterScreen() {
                     styles.inputContainer,
                     {
                       backgroundColor: colors.backgroundSecondary,
-                      borderColor: errors.email 
-                        ? colors.destructive 
-                        : focusedField === 'email' 
-                        ? colors.primary 
-                        : colors.border,
+                      borderColor: errors.email
+                        ? colors.destructive
+                        : focusedField === 'email'
+                          ? colors.primary
+                          : colors.border,
                       borderWidth: errors.email || focusedField === 'email' ? 2 : 1,
                     },
                   ]}
@@ -273,11 +274,11 @@ export default function RegisterScreen() {
                   <Ionicons
                     name="mail-outline"
                     size={20}
-                    color={errors.email 
-                      ? colors.destructive 
-                      : focusedField === 'email' 
-                      ? colors.primary 
-                      : colors.textTertiary}
+                    color={errors.email
+                      ? colors.destructive
+                      : focusedField === 'email'
+                        ? colors.primary
+                        : colors.textTertiary}
                     style={styles.inputIcon}
                   />
                   <TextInput
@@ -309,11 +310,11 @@ export default function RegisterScreen() {
                     styles.inputContainer,
                     {
                       backgroundColor: colors.backgroundSecondary,
-                      borderColor: errors.password 
-                        ? colors.destructive 
-                        : focusedField === 'password' 
-                        ? colors.primary 
-                        : colors.border,
+                      borderColor: errors.password
+                        ? colors.destructive
+                        : focusedField === 'password'
+                          ? colors.primary
+                          : colors.border,
                       borderWidth: errors.password || focusedField === 'password' ? 2 : 1,
                     },
                   ]}
@@ -321,11 +322,11 @@ export default function RegisterScreen() {
                   <Ionicons
                     name="lock-closed-outline"
                     size={20}
-                    color={errors.password 
-                      ? colors.destructive 
-                      : focusedField === 'password' 
-                      ? colors.primary 
-                      : colors.textTertiary}
+                    color={errors.password
+                      ? colors.destructive
+                      : focusedField === 'password'
+                        ? colors.primary
+                        : colors.textTertiary}
                     style={styles.inputIcon}
                   />
                   <TextInput
@@ -370,11 +371,11 @@ export default function RegisterScreen() {
                     styles.inputContainer,
                     {
                       backgroundColor: colors.backgroundSecondary,
-                      borderColor: errors.confirmPassword 
-                        ? colors.destructive 
-                        : focusedField === 'confirmPassword' 
-                        ? colors.primary 
-                        : colors.border,
+                      borderColor: errors.confirmPassword
+                        ? colors.destructive
+                        : focusedField === 'confirmPassword'
+                          ? colors.primary
+                          : colors.border,
                       borderWidth: errors.confirmPassword || focusedField === 'confirmPassword' ? 2 : 1,
                     },
                   ]}
@@ -382,11 +383,11 @@ export default function RegisterScreen() {
                   <Ionicons
                     name="lock-closed-outline"
                     size={20}
-                    color={errors.confirmPassword 
-                      ? colors.destructive 
-                      : focusedField === 'confirmPassword' 
-                      ? colors.primary 
-                      : colors.textTertiary}
+                    color={errors.confirmPassword
+                      ? colors.destructive
+                      : focusedField === 'confirmPassword'
+                        ? colors.primary
+                        : colors.textTertiary}
                     style={styles.inputIcon}
                   />
                   <TextInput

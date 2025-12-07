@@ -1,16 +1,42 @@
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar, setStatusBarBackgroundColor, setStatusBarStyle, setStatusBarTranslucent } from 'expo-status-bar';
+import { View, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 import { ToastProvider } from '../src/components/Toast';
+import { DialogProvider } from '../src/contexts/DialogContext';
+import { useEffect, useRef } from 'react';
 
 function RootStack() {
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const isInitialized = useRef(false);
+
+  // Set translucent only once on mount to avoid layout shift
+  useEffect(() => {
+    if (Platform.OS === 'android' && !isInitialized.current) {
+      setStatusBarTranslucent(false);
+      isInitialized.current = true;
+    }
+  }, []);
+
+  // Update status bar colors when theme changes (without changing translucent)
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      setStatusBarBackgroundColor(colors.background, false);
+    }
+    setStatusBarStyle(isDark ? 'light' : 'dark', false);
+  }, [colors.background, isDark]);
 
   return (
-    <>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar
+        style={isDark ? 'light' : 'dark'}
+        backgroundColor={colors.background}
+        translucent={false}
+      />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -90,7 +116,7 @@ function RootStack() {
           }}
         />
       </Stack>
-    </>
+    </View>
   );
 }
 
@@ -99,9 +125,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <ToastProvider>
-            <RootStack />
-          </ToastProvider>
+          <DialogProvider>
+            <ToastProvider>
+              <RootStack />
+            </ToastProvider>
+          </DialogProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

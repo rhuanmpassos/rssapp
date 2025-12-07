@@ -8,10 +8,10 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
+import { useGlobalDialog } from '../contexts/DialogContext';
 import { api } from '../services/api';
 import * as Haptics from 'expo-haptics';
 
@@ -36,6 +36,7 @@ export function FolderChips({
   type = 'site',
 }: FolderChipsProps) {
   const { colors, isDark } = useTheme();
+  const { showError } = useGlobalDialog();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -72,7 +73,7 @@ export function FolderChips({
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) {
-      Alert.alert('Erro', 'Digite um nome para a pasta');
+      showError('Erro', 'Digite um nome para a pasta');
       return;
     }
 
@@ -86,7 +87,7 @@ export function FolderChips({
       setShowCreateModal(false);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
-      Alert.alert(
+      showError(
         'Erro',
         error.response?.data?.message || 'Não foi possível criar a pasta'
       );
@@ -122,8 +123,8 @@ export function FolderChips({
                   selectedFolderId === null
                     ? colors.primary
                     : isDark
-                    ? colors.card
-                    : colors.border,
+                      ? colors.card
+                      : colors.border,
               },
             ]}
             onPress={() => handleSelectFolder(null)}
@@ -154,8 +155,8 @@ export function FolderChips({
                     selectedFolderId === folder.id
                       ? colors.primary
                       : isDark
-                      ? colors.card
-                      : colors.border,
+                        ? colors.card
+                        : colors.border,
                 },
               ]}
               onPress={() => handleSelectFolder(folder.id)}
@@ -301,11 +302,11 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    marginRight: 70, // Space for fixed button
+    marginRight: 85, // Space for fixed button (70px button + 12px right + margin)
   },
   scrollContent: {
     paddingLeft: 12,
-    paddingRight: 0, // No padding on right - let last chip be cut off
+    paddingRight: 20, // Extra padding to ensure last chip is fully visible
     gap: 4,
     alignItems: 'center',
   },

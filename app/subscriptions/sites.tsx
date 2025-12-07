@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   RefreshControl,
   Switch,
@@ -16,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { useGlobalDialog } from '../../src/contexts/DialogContext';
 import { api } from '../../src/services/api';
 import { SkeletonCard } from '../../src/components/SkeletonLoader';
 import { SwipeableRow } from '../../src/components/SwipeableRow';
@@ -36,6 +36,7 @@ interface SiteSubscription {
 
 export default function SitesScreen() {
   const { colors, isDark } = useTheme();
+  const { showError, showSuccess, showConfirm } = useGlobalDialog();
   const [sites, setSites] = useState<SiteSubscription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -46,7 +47,7 @@ export default function SitesScreen() {
       setSites(response.data.data || []);
     } catch (error: any) {
       if (error.response?.status && error.response.status !== 401) {
-        Alert.alert('Erro', 'Não foi possível carregar os sites');
+        showError('Erro', 'Não foi possível carregar os sites');
       }
     } finally {
       setIsLoading(false);
@@ -65,26 +66,24 @@ export default function SitesScreen() {
   };
 
   const handleDelete = (site: SiteSubscription) => {
-    Alert.alert(
+    showConfirm(
       'Excluir Site',
       `Deseja realmente excluir "${site.feed?.title || site.target}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/subscriptions/${site.id}`);
-              setSites(sites.filter((s) => s.id !== site.id));
-              Alert.alert('Sucesso', 'Site removido com sucesso');
-            } catch (error: any) {
-              console.error('Error deleting site:', error);
-              Alert.alert('Erro', 'Não foi possível excluir o site');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          await api.delete(`/subscriptions/${site.id}`);
+          setSites(sites.filter((s) => s.id !== site.id));
+          showSuccess('Sucesso', 'Site removido com sucesso');
+        } catch (error: any) {
+          console.error('Error deleting site:', error);
+          showError('Erro', 'Não foi possível excluir o site');
+        }
+      },
+      {
+        confirmText: 'Excluir',
+        cancelText: 'Cancelar',
+        confirmStyle: 'destructive',
+      }
     );
   };
 
@@ -101,14 +100,14 @@ export default function SitesScreen() {
           s.id === site.id ? { ...s, enabled: !newValue } : s
         )
       );
-      Alert.alert('Erro', 'Não foi possível alterar o status');
+      showError('Erro', 'Não foi possível alterar o status');
     }
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      
+
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.background }]}>
         <TouchableOpacity
@@ -189,7 +188,7 @@ export default function SitesScreen() {
                 icon: site.enabled ? 'eye-off' : 'eye',
                 label: site.enabled ? 'Desativar' : 'Ativar',
                 color: site.enabled ? colors.textTertiary : colors.primary,
-                onPress: () => handleToggle(site),
+                onPress: () => handleToggle(site, !site.enabled),
               }}
             >
               <View style={[styles.siteCard, { backgroundColor: colors.card }]}>
@@ -205,14 +204,14 @@ export default function SitesScreen() {
                       </View>
                     )}
                     <View style={styles.siteText}>
-                      <Text 
+                      <Text
                         style={[styles.siteTitle, { color: colors.text }]}
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
                         {site.feed?.title || site.target}
                       </Text>
-                      <Text 
+                      <Text
                         style={[styles.siteDomain, { color: colors.textTertiary }]}
                         numberOfLines={1}
                         ellipsizeMode="tail"

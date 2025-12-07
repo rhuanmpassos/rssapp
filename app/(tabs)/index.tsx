@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   FlatList,
-  Alert,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -25,6 +24,7 @@ import { EmptyState } from '../../src/components/EmptyState';
 import { UrgencyIndicator } from '../../src/components/UrgencyIndicator';
 import { persuasiveCopy, getContextualCopy } from '../../src/utils/persuasiveCopy';
 import { api } from '../../src/services/api';
+import { useGlobalDialog } from '../../src/contexts/DialogContext';
 import { useProgressStore } from '../../src/store/progressStore';
 import { useDebounce } from '../../src/hooks/useDebounce';
 import { FolderChips } from '../../src/components/FolderChips';
@@ -36,6 +36,7 @@ import { persuasiveHaptics } from '../../src/utils/persuasiveHaptics';
 
 export default function FeedScreen() {
   const { colors, isDark } = useTheme();
+  const { showError } = useGlobalDialog();
   // Usar selectors específicos para evitar re-renders desnecessários
   const feedItems = useFeedStore((state) => state.feedItems);
   const isLoadingItems = useFeedStore((state) => state.isLoadingItems);
@@ -82,6 +83,7 @@ export default function FeedScreen() {
   // Filter items by search query and folder (usando debounce)
   const filteredItems = React.useMemo(() => {
     let filtered = feedItems;
+    console.log(`[Filter] Starting with ${filtered.length} items`);
 
     // CRITICAL: Filter out YouTube videos (they should only appear in YouTube tab)
     filtered = filtered.filter((item) => {
@@ -95,6 +97,7 @@ export default function FeedScreen() {
         return true;
       }
     });
+    console.log(`[Filter] After YouTube filter: ${filtered.length} items`);
 
     // Filter by folder (if selected)
     if (selectedFolderId) {
@@ -104,9 +107,13 @@ export default function FeedScreen() {
         .map((sub) => sub.feed?.id)
         .filter(Boolean);
 
+      console.log(`[Filter] Folder ${selectedFolderId} has ${folderSubscriptions.length} feed IDs:`, folderSubscriptions);
+      console.log(`[Filter] Sample item feedIds:`, filtered.slice(0, 3).map(i => ({ title: i.title?.substring(0, 30), feedId: i.feedId })));
+
       filtered = filtered.filter((item) =>
         folderSubscriptions.includes(item.feedId)
       );
+      console.log(`[Filter] After folder filter: ${filtered.length} items`);
     }
 
     // Filter by search query
@@ -129,6 +136,7 @@ export default function FeedScreen() {
       return true;
     });
 
+    console.log(`[Filter] Final count: ${filtered.length} items`);
     return filtered;
   }, [feedItems, debouncedSearchQuery, selectedFolderId, subscriptions]);
 
@@ -246,7 +254,7 @@ export default function FeedScreen() {
               }
             } catch (error) {
               console.error('Error adding suggestion:', error);
-              Alert.alert('Erro', 'Não foi possível adicionar o feed');
+              showError('Erro', 'Não foi possível adicionar o feed');
             }
           }}
           title={subscriptions.length === 0 ? "Feeds RSS Disponíveis" : "Adicionar mais feeds"}

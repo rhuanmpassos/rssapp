@@ -121,7 +121,14 @@ export const useFeedStore = create<FeedState>((set, get) => ({
         (s) => s.type === 'site' && s.feed
       );
 
+      console.log(`[FeedStore] Total subscriptions: ${subscriptions.length}`);
+      console.log(`[FeedStore] Site subscriptions with feed: ${siteSubscriptions.length}`);
+      siteSubscriptions.forEach((sub, i) => {
+        console.log(`[FeedStore] Sub ${i + 1}: feedId=${sub.feed?.id}, folder=${sub.folder?.name || 'none'}, target=${sub.target}`);
+      });
+
       if (siteSubscriptions.length === 0) {
+        console.log('[FeedStore] No site subscriptions found, returning empty');
         set({ feedItems: [], isLoadingItems: false });
         return;
       }
@@ -129,17 +136,25 @@ export const useFeedStore = create<FeedState>((set, get) => ({
       // Fetch items from each feed and combine
       const allItemsPromises = siteSubscriptions.map(async (sub) => {
         try {
+          console.log(`[FeedStore] Fetching items from feed: ${sub.feed!.id}`);
           const response = await api.get(`/feeds/${sub.feed!.id}/items`, {
-            params: { page: 1, limit: 10 },
+            params: { page: 1, limit: 20 }, // Increased from 10 to 20 items per feed
           });
+          console.log(`[FeedStore] Feed ${sub.feed!.id} returned ${response.data.data?.length || 0} items`);
           return response.data.data;
-        } catch {
+        } catch (err) {
+          console.error(`[FeedStore] Error fetching feed ${sub.feed!.id}:`, err);
           return [];
         }
       });
 
       const results = await Promise.all(allItemsPromises);
       const allItems = results.flat();
+
+      console.log(`[FeedStore] Total items fetched: ${allItems.length}`);
+      if (allItems.length > 0) {
+        console.log(`[FeedStore] First item: ${allItems[0].title}, thumbnail: ${allItems[0].thumbnailUrl}`);
+      }
 
       // Sort by publishedAt
       allItems.sort((a, b) => {
@@ -148,11 +163,14 @@ export const useFeedStore = create<FeedState>((set, get) => ({
         return dateB - dateA;
       });
 
+      // Keep all items instead of limiting - filtering happens in the UI
+      // This ensures each folder has enough items when filtered
       set({
-        feedItems: allItems.slice(0, 50), // Limit to 50 items
+        feedItems: allItems, // Removed the .slice(0, 50) limit
         isLoadingItems: false,
       });
     } catch (error: any) {
+      console.error('[FeedStore] Error in fetchAllItems:', error);
       set({
         error: error.response?.data?.message || 'Failed to fetch items',
         isLoadingItems: false,
@@ -165,7 +183,7 @@ export const useFeedStore = create<FeedState>((set, get) => ({
       set({ isLoading: true, error: null });
       await api.post('/subscriptions/site', { url });
       await get().fetchSubscriptions();
-      
+
       // Update progress - increment subscriptions count
       const { subscriptions } = get();
       const progressStore = useProgressStore.getState();

@@ -35,8 +35,22 @@ const formatDate = (dateStr: string) => {
   return format(date, "dd MMM 'às' HH:mm", { locale: ptBR });
 };
 
-const formatDuration = (duration: string | null) => {
-  if (!duration) return '';
+const formatDuration = (duration: string | number | null) => {
+  if (!duration && duration !== 0) return '';
+
+  // If duration is a number (seconds from youtubei.js)
+  if (typeof duration === 'number') {
+    const hours = Math.floor(duration / 3600);
+    const minutes = Math.floor((duration % 3600) / 60);
+    const seconds = Math.floor(duration % 60);
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds
+        .toString()
+        .padStart(2, '0')}`;
+    }
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
 
   // Parse ISO 8601 duration (PT1H2M10S)
   const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
@@ -129,8 +143,9 @@ export const VideoCard = React.memo(function VideoCard({ video, channelTitle }: 
   const formattedDate = useMemo(() => formatDate(video.publishedAt), [video.publishedAt]);
   const displayChannel = useMemo(() => channelTitle || 'YouTube', [channelTitle]);
 
-  // Detect if video is a livestream (duration is null for active lives)
-  const isLive = !video.duration;
+  // Detect if video is a livestream
+  // ONLY use explicit isLive field from backend (don't fallback to !duration)
+  const isLive = (video as any).isLive === true;
 
   return (
     <Card onPress={handlePress} style={styles.card} padding="none">
@@ -144,6 +159,7 @@ export const VideoCard = React.memo(function VideoCard({ video, channelTitle }: 
           cachePolicy="memory-disk"
           priority="normal"
           placeholderContentFit="cover"
+          recyclingKey={video.videoId}
         />
 
         {/* Play icon overlay */}

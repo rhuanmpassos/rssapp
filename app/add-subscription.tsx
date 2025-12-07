@@ -65,7 +65,7 @@ export default function AddSubscriptionScreen() {
 
   const isSite = type === 'site';
 
-  // Check for duplicates when URL changes
+  // Check for duplicates when URL changes - only for valid URLs
   useEffect(() => {
     if (!url.trim()) {
       setIsDuplicate(false);
@@ -76,16 +76,71 @@ export default function AddSubscriptionScreen() {
     try {
       const trimmedUrl = url.trim().toLowerCase();
 
-      // Check in feed subscriptions
+      // Only check for duplicates if it looks like a URL
+      const looksLikeUrl = trimmedUrl.startsWith('http://') ||
+        trimmedUrl.startsWith('https://') ||
+        trimmedUrl.includes('.') && trimmedUrl.length > 4;
+
+      if (!looksLikeUrl) {
+        // It's a search query, not a URL - don't show duplicate warning
+        setIsDuplicate(false);
+        setDuplicateMessage('');
+        return;
+      }
+
+      // Extract domain from input URL
+      let inputDomain = '';
+      try {
+        if (trimmedUrl.startsWith('http')) {
+          const urlObj = new URL(trimmedUrl);
+          inputDomain = urlObj.hostname.replace('www.', '').toLowerCase();
+        } else {
+          // Try to parse as domain
+          inputDomain = trimmedUrl.split('/')[0].replace('www.', '').toLowerCase();
+        }
+      } catch {
+        inputDomain = trimmedUrl.replace('www.', '').toLowerCase();
+      }
+
+      // Check in feed subscriptions - compare domains only
       const feedDuplicate = subscriptions.some((sub) => {
-        const subUrl = sub.feed?.url?.toLowerCase() || '';
-        return subUrl === trimmedUrl || subUrl.includes(trimmedUrl) || trimmedUrl.includes(subUrl);
+        const feedUrl = sub.feed?.url || sub.target || '';
+        if (!feedUrl) return false;
+
+        try {
+          const feedUrlObj = new URL(feedUrl);
+          const feedDomain = feedUrlObj.hostname.replace('www.', '').toLowerCase();
+          // Only match if domains are exactly the same
+          return feedDomain === inputDomain;
+        } catch {
+          return false;
+        }
       });
 
-      // Check in YouTube channels
+      // Check in YouTube channels - compare channelId, customUrl, or URL
       const youtubeDuplicate = channels.some((channel) => {
-        const channelUrl = (channel.customUrl || channel.title)?.toLowerCase() || '';
-        return channelUrl === trimmedUrl || channelUrl.includes(trimmedUrl) || trimmedUrl.includes(channelUrl);
+        // Check if input is a YouTube URL
+        if (trimmedUrl.includes('youtube.com') || trimmedUrl.includes('youtu.be')) {
+          // Extract channel identifier from URL
+          const channelIdMatch = trimmedUrl.match(/channel\/([^\/\?]+)/i);
+          const customUrlMatch = trimmedUrl.match(/@([^\/\?]+)/i);
+
+          if (channelIdMatch && channel.channelId === channelIdMatch[1]) {
+            return true;
+          }
+          if (customUrlMatch && channel.customUrl?.toLowerCase().includes(customUrlMatch[1].toLowerCase())) {
+            return true;
+          }
+        }
+
+        // Check if input matches exactly the customUrl (like @channelname)
+        if (trimmedUrl.startsWith('@')) {
+          const inputHandle = trimmedUrl.substring(1).toLowerCase();
+          const channelHandle = (channel.customUrl || '').replace('@', '').toLowerCase();
+          return inputHandle === channelHandle;
+        }
+
+        return false;
       });
 
       if (feedDuplicate || youtubeDuplicate) {

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   RefreshControl,
   Image,
 } from 'react-native';
@@ -15,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { useGlobalDialog } from '../../src/contexts/DialogContext';
 import { api } from '../../src/services/api';
 import { SkeletonCard } from '../../src/components/SkeletonLoader';
 import { SwipeableRow } from '../../src/components/SwipeableRow';
@@ -34,6 +34,7 @@ interface YouTubeChannel {
 
 export default function YouTubeScreen() {
   const { colors, isDark } = useTheme();
+  const { showError, showSuccess, showConfirm } = useGlobalDialog();
   const [channels, setChannels] = useState<YouTubeChannel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,7 +46,7 @@ export default function YouTubeScreen() {
       setChannels(response.data.data || []);
     } catch (error: any) {
       if (error.response?.status && error.response.status !== 401) {
-        Alert.alert('Erro', 'Não foi possível carregar os canais');
+        showError('Erro', 'Não foi possível carregar os canais');
       }
     } finally {
       setIsLoading(false);
@@ -66,45 +67,43 @@ export default function YouTubeScreen() {
   const handleDelete = (channel: YouTubeChannel) => {
     // For custom feeds, use subscriptionId; for regular channels, find subscription by channelId
     const subscriptionId = channel.isCustomFeed ? channel.subscriptionId : channel.id;
-    
-    Alert.alert(
+
+    showConfirm(
       'Excluir Canal',
       `Deseja realmente excluir "${channel.title}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              if (channel.isCustomFeed && channel.subscriptionId) {
-                await api.delete(`/subscriptions/${channel.subscriptionId}`);
-              } else {
-                // For regular YouTube channels, find and delete the subscription
-                const response = await api.get('/subscriptions?type=youtube');
-                const subscription = response.data.data?.find(
-                  (sub: any) => sub.channel?.id === channel.id || sub.channelId === channel.id
-                );
-                if (subscription) {
-                  await api.delete(`/subscriptions/${subscription.id}`);
-                }
-              }
-              setChannels(channels.filter((c) => c.id !== channel.id));
-              Alert.alert('Sucesso', 'Canal removido com sucesso');
-            } catch (error: any) {
-              console.error('Error deleting channel:', error);
-              Alert.alert('Erro', 'Não foi possível excluir o canal');
+      async () => {
+        try {
+          if (channel.isCustomFeed && channel.subscriptionId) {
+            await api.delete(`/subscriptions/${channel.subscriptionId}`);
+          } else {
+            // For regular YouTube channels, find and delete the subscription
+            const response = await api.get('/subscriptions?type=youtube');
+            const subscription = response.data.data?.find(
+              (sub: any) => sub.channel?.id === channel.id || sub.channelId === channel.id
+            );
+            if (subscription) {
+              await api.delete(`/subscriptions/${subscription.id}`);
             }
-          },
-        },
-      ]
+          }
+          setChannels(channels.filter((c) => c.id !== channel.id));
+          showSuccess('Sucesso', 'Canal removido com sucesso');
+        } catch (error: any) {
+          console.error('Error deleting channel:', error);
+          showError('Erro', 'Não foi possível excluir o canal');
+        }
+      },
+      {
+        confirmText: 'Excluir',
+        cancelText: 'Cancelar',
+        confirmStyle: 'destructive',
+      }
     );
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      
+
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.background }]}>
         <TouchableOpacity
@@ -198,14 +197,14 @@ export default function YouTubeScreen() {
                       </View>
                     )}
                     <View style={styles.channelText}>
-                      <Text 
+                      <Text
                         style={[styles.channelTitle, { color: colors.text }]}
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
                         {channel.title || 'Canal desconhecido'}
                       </Text>
-                      <Text 
+                      <Text
                         style={[styles.channelId, { color: colors.textTertiary }]}
                         numberOfLines={1}
                         ellipsizeMode="tail"

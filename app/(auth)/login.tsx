@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ScrollView,
   Animated,
 } from 'react-native';
@@ -17,10 +16,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { useGlobalDialog } from '../../src/contexts/DialogContext';
 import { useAuthStore } from '../../src/store/authStore';
 
 export default function LoginScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
+  const { showError } = useGlobalDialog();
   const { login, isLoading } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,7 +32,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Erro', 'Preencha todos os campos');
+      showError('Erro', 'Preencha todos os campos');
       return;
     }
 
@@ -44,7 +45,7 @@ export default function LoginScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const errorMessage = error.message || 'Não foi possível fazer login';
       console.error('Login error details:', error);
-      Alert.alert('Erro no Login', errorMessage);
+      showError('Erro no Login', errorMessage);
     }
   };
 
@@ -56,7 +57,7 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      
+
       {/* Theme Toggle Button */}
       <View style={styles.topBar}>
         <View style={styles.spacer} />

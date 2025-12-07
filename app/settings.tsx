@@ -6,14 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
-  Alert,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { useGlobalDialog } from '../src/contexts/DialogContext';
 import { api } from '../src/services/api';
 import { useAuthStore } from '../src/store/authStore';
 
@@ -87,6 +87,7 @@ function SettingRow({
 
 export default function SettingsScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
+  const { showConfirm } = useGlobalDialog();
   const [notifications, setNotifications] = React.useState(true);
   const [sitesCount, setSitesCount] = useState(0);
   const [youtubeCount, setYoutubeCount] = useState(0);
@@ -121,25 +122,25 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = async () => {
-    Alert.alert(
+    showConfirm(
       'Sair',
       'Tem certeza que deseja sair da sua conta?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sair',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            router.replace('/(auth)/login');
-          },
-        },
-      ]
+      async () => {
+        await logout();
+        router.replace('/(auth)/login');
+      },
+      {
+        confirmText: 'Sair',
+        cancelText: 'Cancelar',
+        confirmStyle: 'destructive',
+      }
     );
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* Header */}
@@ -299,7 +300,7 @@ export default function SettingsScreen() {
           RSS Aggregator © 2024
         </Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
