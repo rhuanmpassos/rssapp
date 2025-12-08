@@ -4,6 +4,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useAuthStore } from '../src/store/authStore';
+import { setOnAuthExpired } from '../src/services/api';
 
 const ONBOARDING_KEY = '@rss_aggregator:onboarding_completed';
 
@@ -24,6 +25,11 @@ export default function Index() {
         setCheckingOnboarding(false);
       }
     };
+
+    // Register callback for when auth token expires (401 error)
+    setOnAuthExpired(() => {
+      router.replace('/(auth)/login');
+    });
 
     checkOnboarding();
     loadStoredAuth();

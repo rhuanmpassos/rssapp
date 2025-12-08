@@ -81,6 +81,14 @@ api.interceptors.request.use(
 );
 
 // Response interceptor - handle errors
+let isRedirectingToLogin = false;
+let onAuthExpired: (() => void) | null = null;
+
+// Function to set the callback for auth expiration (called from app init)
+export const setOnAuthExpired = (callback: () => void) => {
+  onAuthExpired = callback;
+};
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -95,12 +103,28 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401) {
-      // Token expired or invalid - clear auth
-      try {
-        await SecureStore.deleteItemAsync('auth_token');
-        await SecureStore.deleteItemAsync('auth_user');
-      } catch (e) {
-        console.log('Error clearing auth:', e);
+      // Avoid multiple redirects
+      if (!isRedirectingToLogin) {
+        isRedirectingToLogin = true;
+
+        // Token expired or invalid - clear auth
+        try {
+          await SecureStore.deleteItemAsync('auth_token');
+          await SecureStore.deleteItemAsync('auth_user');
+
+          // Call the auth expired callback if set
+          if (onAuthExpired) {
+            setTimeout(() => {
+              onAuthExpired?.();
+              isRedirectingToLogin = false;
+            }, 100);
+          } else {
+            isRedirectingToLogin = false;
+          }
+        } catch (e) {
+          console.log('Error clearing auth:', e);
+          isRedirectingToLogin = false;
+        }
       }
     }
     return Promise.reject(error);

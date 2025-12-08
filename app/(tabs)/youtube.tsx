@@ -411,6 +411,7 @@ export default function YouTubeScreen() {
         windowSize={21}
         updateCellsBatchingPeriod={50}
         onEndReachedThreshold={0.5}
+        removeClippedSubviews={false}
       />
 
       {/* FAB - Only show when there are channels */}

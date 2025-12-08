@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { api } from '../services/api';
+import { useBookmarkStore } from './bookmarkStore';
 
 interface User {
   id: string;
@@ -53,9 +54,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
       });
+
+      // Sync bookmarks from server after login
+      setTimeout(() => {
+        useBookmarkStore.getState().syncWithServer();
+      }, 500);
     } catch (error: any) {
       set({ isLoading: false });
-      
+
       // Better error handling
       if (error.response) {
         // Server responded with error
@@ -134,6 +140,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthenticated: true,
           isLoading: false,
         });
+
+        // Sync bookmarks from server after loading stored auth
+        setTimeout(() => {
+          useBookmarkStore.getState().syncWithServer();
+        }, 1000);
       } else {
         set({ isLoading: false });
       }

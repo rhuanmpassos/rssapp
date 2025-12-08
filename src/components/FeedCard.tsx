@@ -135,15 +135,17 @@ export const FeedCard = React.memo(function FeedCard({ item, feedTitle }: FeedCa
       <View style={styles.content}>
         {/* Thumbnail */}
         {item.thumbnailUrl && (
-          <View style={styles.thumbnailContainer}>
+          <View style={styles.thumbnailContainer} key={`thumb-${item.id}`}>
             <Image
               source={{ uri: item.thumbnailUrl }}
               style={styles.thumbnail}
               contentFit="cover"
-              transition={200}
+              transition={150}
               cachePolicy="memory-disk"
-              priority="normal"
+              priority="high"
               placeholderContentFit="cover"
+              recyclingKey={item.id}
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
             />
 
             {/* Social Proof Badge */}

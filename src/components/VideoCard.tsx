@@ -157,16 +157,17 @@ export const VideoCard = React.memo(function VideoCard({ video, channelTitle }: 
   return (
     <Card onPress={handlePress} style={styles.card} padding="none">
       {/* Thumbnail with duration overlay */}
-      <View style={styles.thumbnailContainer}>
+      <View style={styles.thumbnailContainer} key={`thumb-${video.id}`}>
         <Image
           source={{ uri: thumbnailUrl }}
           style={styles.thumbnail}
           contentFit="cover"
-          transition={200}
+          transition={150}
           cachePolicy="memory-disk"
-          priority="normal"
+          priority="high"
           placeholderContentFit="cover"
-          recyclingKey={video.videoId}
+          recyclingKey={video.id}
+          placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
         />
 
         {/* Play icon overlay */}

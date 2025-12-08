@@ -345,6 +345,7 @@ export default function FeedScreen() {
         windowSize={21}
         updateCellsBatchingPeriod={50}
         onEndReachedThreshold={0.5}
+        removeClippedSubviews={false}
       />
 
       {/* FAB */}
