@@ -48,7 +48,6 @@ export default function YouTubeScreen() {
   const [showStreakWarning, setShowStreakWarning] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
 
-  // Progress Store
   const progress = useProgressStore((state) => state.progress);
   const dismissCelebration = useProgressStore((state) => state.dismissCelebration);
   const pendingCelebration = useProgressStore((state) => state.pendingCelebration);
@@ -86,23 +85,42 @@ export default function YouTubeScreen() {
 
   const hasLiveVideos = liveVideos.length > 0;
 
-  // Calculate recent videos by channel (last 24 hours)
-  const recentVideosByChannel = React.useMemo(() => {
+  // Calculate feed video count by channel (last 6 regular videos per channel)
+  // Also calculate which of those have videos from last 24 hours
+  const { feedVideoCountByChannel, recentVideosByChannel } = React.useMemo(() => {
+    const feedCountMap = new Map<string, number>();
+    const recentCountMap = new Map<string, number>();
+
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
-    const countMap = new Map<string, number>();
-
-    videos.forEach((video) => {
-      const publishDate = new Date(video.publishedAt);
-      if (publishDate >= oneDayAgo && video.channelDbId) {
-        const current = countMap.get(video.channelDbId) || 0;
-        countMap.set(video.channelDbId, current + 1);
-      }
+    // Filter to only regular videos (same logic as filteredVideos)
+    const regularVideos = videos.filter((video) => {
+      if (video.isLive === true || video.videoType === 'live') return false;
+      if (video.videoType === 'vod') return false;
+      if (video.videoType === 'short') return false;
+      return true;
     });
 
-    return countMap;
-  }, [videos]);
+    // Group by channel, get last 6 per channel, and count recent ones
+    channels.forEach((channel) => {
+      const channelVideos = regularVideos
+        .filter((video) => video.channelDbId === channel.id)
+        .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+        .slice(0, 6);
+
+      // Count how many of those 6 are from last 24 hours
+      const recentCount = channelVideos.filter((video) => {
+        const publishDate = new Date(video.publishedAt);
+        return publishDate >= oneDayAgo;
+      }).length;
+
+      feedCountMap.set(channel.id, channelVideos.length);
+      recentCountMap.set(channel.id, recentCount);
+    });
+
+    return { feedVideoCountByChannel: feedCountMap, recentVideosByChannel: recentCountMap };
+  }, [videos, channels]);
 
   // Filter videos by search query, channel, and recency
   const filteredVideos = React.useMemo(() => {
@@ -312,11 +330,13 @@ export default function YouTubeScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
 
-      {/* Search Bar */}
+      {/* Search Bar with Settings */}
       <SearchBar
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder="Buscar vídeos..."
+        showSettings
+        onSettingsPress={() => router.push('/settings')}
       />
 
       {/* Channel Chips */}
@@ -327,6 +347,7 @@ export default function YouTubeScreen() {
         hasLiveVideos={hasLiveVideos}
         liveCount={liveVideos.length}
         recentVideosByChannel={recentVideosByChannel}
+        feedVideoCountByChannel={feedVideoCountByChannel}
       />
 
       {/* Videos List */}
@@ -361,16 +382,12 @@ export default function YouTubeScreen() {
                 />
               )}
 
-              {/* Indicador de Vídeos Novos */}
-              {videos.length > 0 && (
+              {/* Indicador de Vídeos - Dinâmico baseado no canal selecionado */}
+              {filteredVideos.length > 0 && (
                 <UrgencyIndicator
                   type="newContent"
-                  count={videos.filter(video => {
-                    const publishedDate = new Date(video.publishedAt);
-                    const now = new Date();
-                    const hoursDiff = (now.getTime() - publishedDate.getTime()) / (1000 * 60 * 60);
-                    return hoursDiff < 48; // Vídeos das últimas 48h
-                  }).length}
+                  count={filteredVideos.length}
+                  contentType="video"
                   dismissible
                   onPress={() => { }}
                 />

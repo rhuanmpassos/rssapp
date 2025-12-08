@@ -2,7 +2,7 @@
   "expo": {
     "name": "RSS App",
     "slug": "rss-app",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "scheme": "rssapp",
     "userInterfaceStyle": "automatic",
@@ -40,7 +40,7 @@
         "origin": false
       },
       "apiUrl": "http://192.168.15.6:3000/api/v1",
-      "serverBaseUrl": "http://localhost:3000/api/v1",
+      "serverBaseUrl": "http://192.168.15.6:3000/api/v1",
       "eas": {
         "projectId": "f3df6e18-1b44-4492-85cd-c9170c848d98"
       }

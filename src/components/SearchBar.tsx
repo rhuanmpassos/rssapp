@@ -8,6 +8,7 @@ import {
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { spacing, borderRadius } from '../theme';
 import { getElevation, animation } from '../theme/design-system';
@@ -39,6 +40,7 @@ export function SearchBar({
   onSettingsPress,
 }: SearchBarProps) {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const [isFocused, setIsFocused] = useState(false);
   const scale = React.useRef(new Animated.Value(1)).current;
   const elevation = React.useRef(new Animated.Value(0)).current;
@@ -90,6 +92,7 @@ export function SearchBar({
           styles.titleContainer,
           {
             backgroundColor: theme.background.primary,
+            paddingTop: insets.top + spacing.sm,
           },
         ]}
       >
@@ -109,60 +112,76 @@ export function SearchBar({
     );
   }
 
-  // Search mode - display as search input
+  // Search mode - display as search input with optional settings icon
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.background.input,
-          borderColor: isFocused ? theme.primary : theme.border.light,
-          transform: [{ scale }],
-          ...getElevation(isFocused ? 'sm' : 'none', isDark),
-        },
-      ]}
-    >
-      <Ionicons
-        name="search"
-        size={20}
-        color={isFocused ? theme.primary : theme.text.tertiary}
-        style={styles.icon}
-      />
-      <TextInput
-        style={[styles.input, { color: theme.text.primary }]}
-        placeholder={placeholder}
-        placeholderTextColor={theme.text.placeholder}
-        value={value}
-        onChangeText={onChangeText}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        autoFocus={autoFocus}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-      {value.length > 0 && (
+    <View style={[styles.searchWrapper, { paddingTop: insets.top + spacing.sm }]}>
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            backgroundColor: theme.background.input,
+            borderColor: isFocused ? theme.primary : theme.border.light,
+            transform: [{ scale }],
+            ...getElevation(isFocused ? 'sm' : 'none', isDark),
+          },
+        ]}
+      >
+        <Ionicons
+          name="search"
+          size={20}
+          color={isFocused ? theme.primary : theme.text.tertiary}
+          style={styles.icon}
+        />
+        <TextInput
+          style={[styles.input, { color: theme.text.primary }]}
+          placeholder={placeholder}
+          placeholderTextColor={theme.text.placeholder}
+          value={value}
+          onChangeText={onChangeText}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          autoFocus={autoFocus}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {value.length > 0 && (
+          <TouchableOpacity
+            onPress={handleClear}
+            style={styles.clearButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="close-circle" size={20} color={theme.text.tertiary} />
+          </TouchableOpacity>
+        )}
+      </Animated.View>
+      {showSettings && (
         <TouchableOpacity
-          onPress={handleClear}
-          style={styles.clearButton}
+          onPress={onSettingsPress}
+          style={styles.settingsButtonInline}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="close-circle" size={20} color={theme.text.tertiary} />
+          <Ionicons name="settings-outline" size={22} color={theme.text.secondary} />
         </TouchableOpacity>
       )}
-    </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.xs,
+  },
   container: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: borderRadius.lg,
     borderWidth: 1.5,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    marginHorizontal: spacing.base,
-    marginVertical: spacing.sm,
     minHeight: 48, // Melhor área de toque
   },
   icon: {
@@ -184,8 +203,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.base,
-    paddingVertical: spacing.base,
-    paddingTop: 40, // Extra padding for status bar
+    paddingVertical: spacing.sm,
   },
   titleText: {
     fontSize: 34,
@@ -196,6 +214,10 @@ const styles = StyleSheet.create({
   settingsButton: {
     padding: spacing.sm,
     marginLeft: spacing.sm,
+  },
+  settingsButtonInline: {
+    padding: spacing.sm,
+    marginLeft: spacing.xs,
   },
 });
 

@@ -111,10 +111,10 @@ export function ProgressMotivator({
           </Text>
         </View>
         <ProgressBar
-          progress={progress}
+          current={experience}
+          target={nextLevelExp}
           height={8}
           color={colors.primary}
-          backgroundColor={colors.backgroundSecondary}
         />
       </View>
 
@@ -131,10 +131,10 @@ export function ProgressMotivator({
             {nextAchievement.name}
           </Text>
           <ProgressBar
-            progress={(nextAchievement.progress / nextAchievement.target) * 100}
+            current={nextAchievement.progress}
+            target={nextAchievement.target}
             height={6}
             color={colors.secondary}
-            backgroundColor={colors.backgroundSecondary}
           />
           <Text style={[styles.achievementProgress, { color: colors.textTertiary }]}>
             {persuasiveCopy.progress.achievements.progress(

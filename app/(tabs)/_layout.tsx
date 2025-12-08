@@ -3,7 +3,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/contexts/ThemeContext';
-import { HeaderRight } from '../../src/components/HeaderRight';
 
 export default function TabLayout() {
   const { colors, isDark } = useTheme();
@@ -22,19 +21,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: {
-          backgroundColor: backgroundColor,
-          elevation: 0,
-          shadowOpacity: 0,
-          borderBottomWidth: 0,
-        },
-        headerRight: () => <HeaderRight />,
-        headerTitleStyle: {
-          fontWeight: '700',
-          fontSize: 34,
-        },
-        headerTitleAlign: 'left',
-        headerTintColor: colors.text,
+        headerShown: false, // Hide headers for all screens - cleaner design
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarStyle: {
@@ -63,7 +50,6 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Feed',
-          headerTitle: 'Feed',
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? 'newspaper' : 'newspaper-outline'}
@@ -77,7 +63,6 @@ export default function TabLayout() {
         name="youtube"
         options={{
           title: 'YouTube',
-          headerTitle: 'YouTube',
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? 'play-circle' : 'play-circle-outline'}
@@ -91,7 +76,6 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Progresso',
-          headerTitle: 'Meu Progresso',
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? 'trophy' : 'trophy-outline'}

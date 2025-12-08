@@ -61,7 +61,7 @@ export const FeedCard = React.memo(function FeedCard({ item, feedTitle }: FeedCa
       toolbarColor: isDark ? theme.background.primary : theme.primary,
       controlsColor: isDark ? theme.primary : '#FFFFFF',
     });
-  }, [item.url, item.id, isDark, theme, markAsRead]);
+  }, [item.url, item.id, isDark, theme, markAsRead, isRead, incrementItemsRead]);
 
   const handleBookmark = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

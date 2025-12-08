@@ -7,12 +7,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 import { ToastProvider } from '../src/components/Toast';
 import { DialogProvider } from '../src/contexts/DialogContext';
+import { ChallengeCelebration } from '../src/components/ChallengeCelebration';
+import { useProgressStore } from '../src/store/progressStore';
 import { useEffect, useRef } from 'react';
 
 function RootStack() {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const isInitialized = useRef(false);
+
+  // Global celebration state (rendered only once here)
+  const pendingChallengeCelebration = useProgressStore((state) => state.pendingChallengeCelebration);
+  const dismissChallengeCelebration = useProgressStore((state) => state.dismissChallengeCelebration);
 
   // Set translucent only once on mount to avoid layout shift
   useEffect(() => {
@@ -116,6 +122,12 @@ function RootStack() {
           }}
         />
       </Stack>
+
+      {/* Global Challenge Celebration - rendered only once */}
+      <ChallengeCelebration
+        challenge={pendingChallengeCelebration}
+        onDismiss={dismissChallengeCelebration}
+      />
     </View>
   );
 }

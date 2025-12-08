@@ -10,6 +10,7 @@ import {
 import { useFocusEffect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useProgressStore } from '../../src/store/progressStore';
 import { ProgressMotivator } from '../../src/components/ProgressMotivator';
@@ -19,6 +20,7 @@ import { StreakBadge } from '../../src/components/StreakBadge';
 
 export default function ProgressScreen() {
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const {
     progress,
     fetchProgress,
@@ -71,6 +73,17 @@ export default function ProgressScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
+
+      {/* Header with Settings */}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Progresso</Text>
+        <TouchableOpacity
+          onPress={() => router.push('/settings')}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -177,6 +190,18 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   scrollView: {
     flex: 1,

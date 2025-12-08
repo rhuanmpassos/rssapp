@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -41,6 +41,16 @@ export function SwipeableRow({
 }: SwipeableRowProps) {
   const { colors } = useTheme();
   const translateX = useRef(new Animated.Value(0)).current;
+  const currentValueRef = useRef(0);
+
+  // Track value changes
+  useEffect(() => {
+    const id = translateX.addListener(({ value }) => {
+      currentValueRef.current = value;
+    });
+    return () => translateX.removeListener(id);
+  }, [translateX]);
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -48,12 +58,12 @@ export function SwipeableRow({
         return Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       },
       onPanResponderGrant: () => {
-        translateX.setOffset(translateX._value);
+        translateX.setOffset(currentValueRef.current);
       },
       onPanResponderMove: (_, gestureState) => {
         const newValue = gestureState.dx;
         const maxSwipe = SCREEN_WIDTH * 0.3;
-        
+
         if (newValue > 0 && rightAction) {
           translateX.setValue(Math.min(newValue, maxSwipe));
         } else if (newValue < 0 && leftAction) {
@@ -62,7 +72,7 @@ export function SwipeableRow({
       },
       onPanResponderRelease: (_, gestureState) => {
         translateX.flattenOffset();
-        
+
         if (gestureState.dx > SWIPE_THRESHOLD && rightAction) {
           // Swipe right
           Animated.spring(translateX, {

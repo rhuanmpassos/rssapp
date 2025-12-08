@@ -23,6 +23,7 @@ export const lightColors = {
   secondaryLight: lightTheme.secondaryLight,
   accent: lightTheme.accent,
   destructive: lightTheme.error,
+  destructiveLight: '#FEE2E2',
 
   // Borders & Separators
   separator: lightTheme.border.medium,
@@ -61,6 +62,7 @@ export const darkColors = {
   secondaryLight: darkTheme.secondaryLight,
   accent: darkTheme.accent,
   destructive: darkTheme.error,
+  destructiveLight: '#7F1D1D',
 
   // Borders & Separators
   separator: darkTheme.border.medium,

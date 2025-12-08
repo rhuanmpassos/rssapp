@@ -189,7 +189,8 @@ export const useFeedStore = create<FeedState>((set, get) => ({
       const progressStore = useProgressStore.getState();
       await progressStore.updateProgress({
         totalSubscriptions: subscriptions.length + 1,
-      });
+      }, 'news'); // 'news' = add site challenge
+      console.log('[FeedStore] Site added, updated progress with totalSubscriptions:', subscriptions.length + 1);
     } catch (error: any) {
       set({ isLoading: false });
       throw new Error(

@@ -75,6 +75,8 @@ export const VideoCard = React.memo(function VideoCard({ video, channelTitle }: 
   const isBookmarked = useBookmarkStore((state) => state.isBookmarked(video.id));
   const addBookmark = useBookmarkStore((state) => state.addBookmark);
   const removeBookmark = useBookmarkStore((state) => state.removeBookmark);
+  const isWatched = useBookmarkStore((state) => state.isRead(video.id));
+  const markAsWatched = useBookmarkStore((state) => state.markAsRead);
 
   const videoUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
   const incrementItemsRead = useProgressStore((state) => state.incrementItemsRead);
@@ -82,14 +84,19 @@ export const VideoCard = React.memo(function VideoCard({ video, channelTitle }: 
   const handlePress = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    // Incrementar XP ao assistir vídeo (gamificação comportamental)
-    await incrementItemsRead('video');
+    // Marcar como assistido ao abrir
+    markAsWatched(video.id, 'video');
+
+    // Incrementar XP se ainda não foi assistido (gamificação comportamental)
+    if (!isWatched) {
+      await incrementItemsRead('video');
+    }
 
     await WebBrowser.openBrowserAsync(videoUrl, {
       toolbarColor: isDark ? theme.background.primary : '#FF0000',
       controlsColor: '#FFFFFF',
     });
-  }, [videoUrl, isDark, theme, incrementItemsRead]);
+  }, [videoUrl, video.id, isDark, theme, markAsWatched, isWatched, incrementItemsRead]);
 
   const handleBookmark = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

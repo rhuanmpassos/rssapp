@@ -17,6 +17,7 @@ interface ChannelChipsProps {
   hasLiveVideos: boolean;
   liveCount?: number;
   recentVideosByChannel?: Map<string, number>; // channelId -> count of videos in last 24h
+  feedVideoCountByChannel?: Map<string, number>; // channelId -> count of videos displayed in feed (max 6)
 }
 
 export function ChannelChips({
@@ -26,6 +27,7 @@ export function ChannelChips({
   hasLiveVideos,
   liveCount = 0,
   recentVideosByChannel,
+  feedVideoCountByChannel,
 }: ChannelChipsProps) {
   const { colors, isDark } = useTheme();
 
@@ -181,13 +183,14 @@ export function ChannelChips({
               {channel.title}
             </Text>
             {(() => {
-              const videoCount = channel._count?.videos || 0;
+              // Use feed video count (videos actually displayed) instead of total from backend
+              const feedCount = feedVideoCountByChannel?.get(channel.id) || 0;
               const recentCount = recentVideosByChannel?.get(channel.id) || 0;
               const hasBeenViewed = viewedChannels.has(channel.id);
-              // Show red only if: has recent videos AND not currently selected AND not viewed before
+              // Show red only if: has recent videos (<24h) AND not currently selected AND not viewed before
               const showAsNew = recentCount > 0 && selectedChannelId !== channel.id && !hasBeenViewed;
 
-              if (videoCount === 0) return null;
+              if (feedCount === 0) return null;
 
               return (
                 <View
@@ -216,7 +219,7 @@ export function ChannelChips({
                       },
                     ]}
                   >
-                    {videoCount}
+                    {feedCount}
                   </Text>
                 </View>
               );

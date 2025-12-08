@@ -46,19 +46,21 @@ interface ProgressState {
   isLoading: boolean;
   error: string | null;
   pendingCelebration: Achievement | null;
+  pendingChallengeCelebration: DailyChallenge | null;
 
   // Actions
   fetchProgress: () => Promise<void>;
   incrementItemsRead: (type: 'news' | 'video') => Promise<void>;
   checkStreak: () => Promise<void>;
   unlockAchievement: (achievementId: string) => void;
-  updateProgress: (updates: Partial<UserProgress>) => Promise<void>;
+  updateProgress: (updates: Partial<UserProgress>, exploreContentType?: 'news' | 'videos') => Promise<void>;
   resetProgress: () => void;
 
   // New Actions
   refreshDailyChallenges: () => void;
   updateChallengeProgress: (type: string, amount?: number) => void;
   dismissCelebration: () => void;
+  dismissChallengeCelebration: () => void;
   checkStreakWarning: () => boolean; // Returns true if warning should be shown
 }
 
@@ -198,6 +200,7 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
   isLoading: false,
   error: null,
   pendingCelebration: null,
+  pendingChallengeCelebration: null,
 
   fetchProgress: async () => {
     try {
@@ -234,16 +237,30 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
           lastChallengeDate: null,
         };
 
-        // Generate initial challenges
+        // Generate initial challenges with balanced types
         const today = new Date().toDateString();
-        const shuffled = [...CHALLENGE_TEMPLATES].sort(() => Math.random() - 0.5);
-        newProgress.dailyChallenges = shuffled.slice(0, 3).map((t, i) => ({
+
+        // Separate templates by type to ensure variety
+        const readTemplates = CHALLENGE_TEMPLATES.filter(t => t.type === 'read');
+        const watchTemplates = CHALLENGE_TEMPLATES.filter(t => t.type === 'watch');
+        const exploreTemplates = CHALLENGE_TEMPLATES.filter(t => t.type === 'explore');
+
+        // Pick one from each category for balanced challenges
+        const selectedChallenges = [
+          readTemplates[Math.floor(Math.random() * readTemplates.length)],
+          watchTemplates[Math.floor(Math.random() * watchTemplates.length)],
+          exploreTemplates[Math.floor(Math.random() * exploreTemplates.length)],
+        ];
+
+        newProgress.dailyChallenges = selectedChallenges.map((t, i) => ({
           ...t,
           id: `challenge_${Date.now()}_${i}`,
           progress: 0,
           completed: false,
         }));
         newProgress.lastChallengeDate = today;
+
+        console.log('[Progress] Generated daily challenges:', newProgress.dailyChallenges.map(c => `${c.title} (${c.type})`));
 
         await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(newProgress));
         set({ progress: newProgress, isLoading: false });
@@ -258,22 +275,50 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
 
   incrementItemsRead: async (type: 'news' | 'video') => {
     const { progress } = get();
-    if (!progress) return;
+    if (!progress) {
+      console.log('[Progress] incrementItemsRead called but no progress loaded');
+      return;
+    }
+
+    console.log(`[Progress] incrementItemsRead called with type: ${type}`);
+    console.log(`[Progress] Current challenges:`, progress.dailyChallenges.map(c => `${c.title} (${c.type}): ${c.progress}/${c.target}`));
+
+    // Determine challenge type
+    const challengeType = type === 'news' ? 'read' : 'watch';
+
+    // Update challenges inline to avoid race condition
+    let challengeXpGained = 0;
+    let completedChallenge: DailyChallenge | null = null;
+    const updatedChallenges = progress.dailyChallenges.map(challenge => {
+      if (!challenge.completed && challenge.type === challengeType) {
+        const newChallengeProgress = Math.min(challenge.progress + 1, challenge.target);
+        console.log(`[Progress] Updating challenge "${challenge.title}": ${challenge.progress} -> ${newChallengeProgress}`);
+        if (newChallengeProgress >= challenge.target && !challenge.completed) {
+          challengeXpGained += challenge.xpReward;
+          console.log(`[Progress] Challenge "${challenge.title}" completed! +${challenge.xpReward} XP`);
+          const completed = { ...challenge, progress: newChallengeProgress, completed: true };
+          completedChallenge = completed;
+          return completed;
+        }
+        return { ...challenge, progress: newChallengeProgress };
+      }
+      return challenge;
+    });
+
+    // Base XP for reading + challenge bonus
+    const totalXpGained = 10 + challengeXpGained;
+    console.log(`[Progress] Total XP gained: ${totalXpGained} (10 base + ${challengeXpGained} challenge bonus)`);
 
     const newProgress = {
       ...progress,
       totalItemsRead: progress.totalItemsRead + 1,
-      experience: progress.experience + 10,
+      experience: progress.experience + totalXpGained,
+      dailyChallenges: updatedChallenges,
     };
 
     newProgress.level = calculateLevel(newProgress.experience);
 
-    // Update challenges
-    const challengeType = type === 'news' ? 'read' : 'watch';
-    get().updateChallengeProgress(challengeType, 1);
-
     // Check reading achievements
-    // ... (Reading achievement logic)
     const readingAchievements = ['reader', 'avid_reader', 'bookworm'];
     readingAchievements.forEach((achId) => {
       const achievement = newProgress.achievements.find((a) => a.id === achId);
@@ -287,7 +332,15 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     });
 
     await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(newProgress));
-    set({ progress: newProgress });
+
+    // Set celebration if a challenge was completed
+    if (completedChallenge) {
+      console.log(`[Progress] Setting pendingChallengeCelebration:`, completedChallenge.title);
+      set({ progress: newProgress, pendingChallengeCelebration: completedChallenge });
+    } else {
+      set({ progress: newProgress });
+    }
+    console.log(`[Progress] State updated. Total items read: ${newProgress.totalItemsRead}, XP: ${newProgress.experience}`);
   },
 
   checkStreak: async () => {
@@ -367,17 +420,19 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     });
   },
 
-  updateProgress: async (updates: Partial<UserProgress>) => {
+  updateProgress: async (updates: Partial<UserProgress>, exploreContentType?: 'news' | 'videos') => {
     const { progress } = get();
     if (!progress) return;
 
-    const newProgress = { ...progress, ...updates };
+    let newProgress = { ...progress, ...updates };
     if (updates.experience !== undefined) {
       newProgress.level = calculateLevel(newProgress.experience);
     }
 
     // Check subscription achievements if updating subscriptions
     if (updates.totalSubscriptions !== undefined) {
+      console.log(`[Progress] updateProgress called with totalSubscriptions: ${updates.totalSubscriptions}`);
+
       const subsAch = ['first_step', 'explorer', 'curator', 'collector', 'master_curator'];
       subsAch.forEach(achId => {
         const achievement = newProgress.achievements.find(a => a.id === achId);
@@ -389,12 +444,53 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
           }
         }
       });
-      // Also update explore challenges
-      get().updateChallengeProgress('explore', 1);
+
+      // Update explore challenges inline to avoid race condition
+      // Filter by contentType if provided (news = add site, videos = add channel)
+      console.log(`[Progress] Updating explore challenges for contentType: ${exploreContentType || 'all'}...`);
+      let challengeXpGained = 0;
+      let completedExploreChallenge: DailyChallenge | null = null;
+      const updatedChallenges = newProgress.dailyChallenges.map(challenge => {
+        // Only update explore challenges that match the contentType (or all if not specified)
+        const matchesContentType = !exploreContentType || challenge.contentType === exploreContentType;
+        if (!challenge.completed && challenge.type === 'explore' && matchesContentType) {
+          const newChallengeProgress = Math.min(challenge.progress + 1, challenge.target);
+          console.log(`[Progress] Updating explore challenge "${challenge.title}": ${challenge.progress} -> ${newChallengeProgress}`);
+          if (newChallengeProgress >= challenge.target && !challenge.completed) {
+            challengeXpGained += challenge.xpReward;
+            console.log(`[Progress] Explore challenge "${challenge.title}" completed! +${challenge.xpReward} XP`);
+            const completed = { ...challenge, progress: newChallengeProgress, completed: true };
+            completedExploreChallenge = completed;
+            return completed;
+          }
+          return { ...challenge, progress: newChallengeProgress };
+        }
+        return challenge;
+      });
+
+      newProgress = {
+        ...newProgress,
+        dailyChallenges: updatedChallenges,
+        experience: newProgress.experience + challengeXpGained,
+      };
+
+      if (challengeXpGained > 0) {
+        newProgress.level = calculateLevel(newProgress.experience);
+      }
+
+      // Queue celebration if a challenge was completed
+      if (completedExploreChallenge) {
+        console.log(`[Progress] Setting pendingChallengeCelebration for explore:`, (completedExploreChallenge as DailyChallenge).title);
+        await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(newProgress));
+        set({ progress: newProgress, pendingChallengeCelebration: completedExploreChallenge });
+        console.log(`[Progress] updateProgress complete. XP: ${newProgress.experience}`);
+        return;
+      }
     }
 
     await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(newProgress));
     set({ progress: newProgress });
+    console.log(`[Progress] updateProgress complete. XP: ${newProgress.experience}`);
   },
 
   resetProgress: async () => {
@@ -408,14 +504,28 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
 
     const today = new Date().toDateString();
     if (progress.lastChallengeDate !== today) {
-      // New day, new challenges
-      const shuffled = [...CHALLENGE_TEMPLATES].sort(() => Math.random() - 0.5);
-      const newChallenges = shuffled.slice(0, 3).map((t, i) => ({
+      console.log('[Progress] New day detected, refreshing challenges');
+
+      // Separate templates by type to ensure variety
+      const readTemplates = CHALLENGE_TEMPLATES.filter(t => t.type === 'read');
+      const watchTemplates = CHALLENGE_TEMPLATES.filter(t => t.type === 'watch');
+      const exploreTemplates = CHALLENGE_TEMPLATES.filter(t => t.type === 'explore');
+
+      // Pick one from each category for balanced challenges
+      const selectedChallenges = [
+        readTemplates[Math.floor(Math.random() * readTemplates.length)],
+        watchTemplates[Math.floor(Math.random() * watchTemplates.length)],
+        exploreTemplates[Math.floor(Math.random() * exploreTemplates.length)],
+      ];
+
+      const newChallenges = selectedChallenges.map((t, i) => ({
         ...t,
         id: `challenge_${Date.now()}_${i}`,
         progress: 0,
         completed: false,
       }));
+
+      console.log('[Progress] New daily challenges:', newChallenges.map(c => `${c.title} (${c.type})`));
 
       const newProgress = {
         ...progress,
@@ -464,6 +574,10 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
 
   dismissCelebration: () => {
     set({ pendingCelebration: null });
+  },
+
+  dismissChallengeCelebration: () => {
+    set({ pendingChallengeCelebration: null });
   },
 
   checkStreakWarning: () => {

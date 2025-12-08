@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../services/api';
+import { useProgressStore } from './progressStore';
 
 export interface YouTubeChannel {
   id: string;
@@ -166,6 +167,13 @@ export const useYouTubeStore = create<YouTubeState>((set, get) => ({
       set({ isLoading: true, error: null });
       await api.post('/subscriptions/youtube', { channelNameOrUrl });
       await get().fetchChannels();
+
+      // Update progress to track explore challenge
+      const channels = get().channels;
+      await useProgressStore.getState().updateProgress({
+        totalSubscriptions: channels.length,
+      }, 'videos'); // 'videos' = add channel challenge
+      console.log('[YouTube] Channel added, updated progress with totalSubscriptions:', channels.length);
     } catch (error: any) {
       set({ isLoading: false });
       throw new Error(

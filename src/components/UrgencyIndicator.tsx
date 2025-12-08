@@ -12,6 +12,7 @@ interface UrgencyIndicatorProps {
   count?: number;
   days?: number;
   remaining?: number;
+  contentType?: 'article' | 'video';
   onPress?: () => void;
   dismissible?: boolean;
   onDismiss?: () => void;
@@ -22,6 +23,7 @@ export function UrgencyIndicator({
   count,
   days,
   remaining,
+  contentType = 'article',
   onPress,
   dismissible = false,
   onDismiss,
@@ -31,7 +33,7 @@ export function UrgencyIndicator({
   const getMessage = () => {
     switch (type) {
       case 'newContent':
-        return persuasiveCopy.urgency.newContent(count || 0);
+        return persuasiveCopy.urgency.newContent(count || 0, contentType);
       case 'streakWarning':
         return persuasiveCopy.urgency.streakWarning(days || 0);
       case 'milestoneNear':
@@ -82,11 +84,11 @@ export function UrgencyIndicator({
   };
 
   const iconColor = getColor();
-  const bgColor = type === 'streakWarning' 
+  const bgColor = type === 'streakWarning'
     ? colors.destructiveLight || '#FEE2E2'
     : type === 'milestoneNear'
-    ? colors.secondaryLight || '#D1FAE5'
-    : colors.primaryLight;
+      ? colors.secondaryLight || '#D1FAE5'
+      : colors.primaryLight;
 
   return (
     <Card

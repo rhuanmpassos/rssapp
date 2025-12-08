@@ -58,7 +58,9 @@ export default function AddSubscriptionScreen() {
 
   // Get existing subscriptions to check for duplicates
   const subscriptions = useFeedStore((state) => state.subscriptions);
+  const addSiteSubscription = useFeedStore((state) => state.addSiteSubscription);
   const channels = useYouTubeStore((state) => state.channels);
+  const addChannel = useYouTubeStore((state) => state.addChannel);
 
   // Custom dialog hook  
   const { dialogConfig, showAlert, hideDialog } = useDialog();
@@ -211,14 +213,10 @@ export default function AddSubscriptionScreen() {
       console.log('feed:', JSON.stringify(feed, null, 2));
       console.log('feedType:', feedType);
       console.log('rssUrl:', rssUrl);
-      console.log('Making POST request to /subscriptions/site...');
+      console.log('Using feedStore.addSiteSubscription for progress tracking...');
 
-      const response = await api.post('/subscriptions/site', {
-        url: rssUrl,
-        folderId: selectedFolderId || undefined,
-      });
-
-      console.log('POST response:', JSON.stringify(response.data, null, 2));
+      // Use the store function to ensure progress tracking works
+      await addSiteSubscription(rssUrl);
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showAlert(
@@ -269,10 +267,8 @@ export default function AddSubscriptionScreen() {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       if (isSite) {
-        await api.post('/subscriptions/site', {
-          url: url.trim(),
-          folderId: selectedFolderId || undefined,
-        });
+        // Use the store function to ensure progress tracking works
+        await addSiteSubscription(url.trim());
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         showAlert(
           '🎉 Sucesso!',
@@ -290,11 +286,14 @@ export default function AddSubscriptionScreen() {
           }]
         );
       } else {
-        // For YouTube, use the same endpoint as sites (it handles custom YouTube feeds too)
-        await api.post('/subscriptions/site', {
-          url: url.trim(),
-          folderId: selectedFolderId || undefined,
-        });
+        // For YouTube, try to use the store for progress tracking
+        // If it's a custom YouTube feed URL, use addSiteSubscription
+        // Otherwise use addChannel
+        if (url.trim().includes('/custom-youtube-feeds/') || url.trim().includes('rss.xml')) {
+          await addSiteSubscription(url.trim());
+        } else {
+          await addChannel(url.trim());
+        }
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         showAlert(
           '🎉 Sucesso!',

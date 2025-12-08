@@ -16,7 +16,7 @@ interface CardProps {
   children: React.ReactNode;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
-  padding?: 'none' | 'sm' | 'md' | 'lg';
+  padding?: 'none' | 'sm' | 'base' | 'md' | 'lg';
   elevated?: boolean;
   elevation?: 'none' | 'sm' | 'md' | 'lg';
 }
@@ -56,6 +56,8 @@ export function Card({
         return 0;
       case 'sm':
         return spacing.sm;
+      case 'base':
+        return spacing.base;
       case 'lg':
         return spacing.xl;
       default:

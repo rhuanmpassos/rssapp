@@ -96,7 +96,7 @@ export interface PersuasiveCopy {
 
   // Notificações e urgência
   urgency: {
-    newContent: (count: number) => string;
+    newContent: (count: number, contentType?: 'article' | 'video') => string;
     streakWarning: (days: number) => string;
     milestoneNear: (remaining: number) => string;
   };
@@ -242,10 +242,16 @@ export const persuasiveCopy: PersuasiveCopy = {
   },
 
   urgency: {
-    newContent: (count: number) => {
-      if (count === 1) return '📰 1 novo artigo esperando por você';
-      if (count < 5) return `📰 ${count} novos artigos esperando por você`;
-      return `📰 ${count} novos artigos! Tem muita coisa boa para ler`;
+    newContent: (count: number, contentType: 'article' | 'video' = 'article') => {
+      const isVideo = contentType === 'video';
+      const emoji = isVideo ? '🎬' : '📰';
+      const singular = isVideo ? 'novo vídeo' : 'novo artigo';
+      const plural = isVideo ? 'novos vídeos' : 'novos artigos';
+      const suffix = isVideo ? 'para assistir' : 'esperando por você';
+
+      if (count === 1) return `${emoji} 1 ${singular} ${suffix}`;
+      if (count < 5) return `${emoji} ${count} ${plural} ${suffix}`;
+      return `${emoji} ${count} ${plural}! Tem muita coisa boa ${isVideo ? 'para ver' : 'para ler'}`;
     },
     streakWarning: (days: number) =>
       `⚠️ Cuidado! Você tem ${days} dias de sequência. Não perca hoje!`,

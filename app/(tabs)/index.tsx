@@ -267,11 +267,13 @@ export default function FeedScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
 
-      {/* Search Bar */}
+      {/* Search Bar with Settings */}
       <SearchBar
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder="Buscar artigos..."
+        showSettings
+        onSettingsPress={() => router.push('/settings')}
       />
 
       {/* Folder Chips */}
@@ -313,16 +315,12 @@ export default function FeedScreen() {
                 />
               )}
 
-              {/* Indicador de Urgência para novo conteúdo */}
-              {feedItems.length > 0 && (
+              {/* Indicador de Artigos - Dinâmico baseado na pasta selecionada */}
+              {filteredItems.length > 0 && (
                 <UrgencyIndicator
                   type="newContent"
-                  count={feedItems.filter(item => {
-                    const publishedDate = new Date(item.publishedAt || '');
-                    const now = new Date();
-                    const hoursDiff = (now.getTime() - publishedDate.getTime()) / (1000 * 60 * 60);
-                    return hoursDiff < 24;
-                  }).length}
+                  count={filteredItems.length}
+                  contentType="article"
                   dismissible
                   onPress={() => {/* scroll to top */ }}
                 />
